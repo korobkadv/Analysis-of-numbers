@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналіз чисел</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+
+        button {
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background-color: #f3f3f3;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .progress-bar-inner {
+            height: 20px;
+            width: 0;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Аналіз чисел</h1>
+    <input type="file" id="fileInput" accept=".txt">
+    <button onclick="handleFileUpload()">Завантажити</button>
+    <div class="progress-bar" id="progressBar">
+        <div class="progress-bar-inner" id="progressBarInner">0%</div>
+    </div>
+    <div id="results"></div>
+    <div id="error" class="error"></div>
+
+    <script>
+        function handleFileUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const errorDiv = document.getElementById('error');
+            const progressBar = document.getElementById('progressBar');
+            const progressBarInner = document.getElementById('progressBarInner');
+
+            errorDiv.textContent = ''; // Очистити попередні помилки
+
+            if (file) {
+                if (file.type !== 'text/plain') {
+                    errorDiv.textContent = 'Будь ласка, завантажте текстовий файл (.txt)';
+                    return;
+                }
+
+                const reader = new FileReader();
+
+                reader.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        const percentLoaded = Math.round((event.loaded / event.total) * 100);
+                        progressBarInner.style.width = percentLoaded + '%';
+                        progressBarInner.textContent = percentLoaded + '%';
+                    }
+                };
+
+                reader.onloadstart = function () {
+                    progressBar.style.display = 'block';
+                    progressBarInner.style.width = '0%';
+                    progressBarInner.textContent = '0%';
+                };
+
+                reader.onload = function (event) {
+                    try {
+                        const text = event.target.result;
+                        const numbers = text.split(/\s+/).map(num => {
+                            const parsed = Number(num);
+                            if (isNaN(parsed)) throw new Error('Недійсні дані у файлі.');
+                            return parsed;
+                        });
+
+                        const results = calculateValues(numbers);
+                        displayResults(results);
+                        progressBar.style.display = 'none';
+                    } catch (error) {
+                        errorDiv.textContent = error.message;
+                        progressBar.style.display = 'none';
+                    }
+                };
+
+                reader.onerror = function () {
+                    errorDiv.textContent = 'Сталася помилка при читанні файлу.';
+                    progressBar.style.display = 'none';
+                };
+
+                reader.readAsText(file);
+            } else {
+                errorDiv.textContent = 'Будь ласка, виберіть файл для завантаження.';
+            }
+        }
+
+        function calculateValues(numbers) {
+            const maxNum = numbers.reduce((max, num) => num > max ? num : max, numbers[0]);
+            const minNum = numbers.reduce((min, num) => num < min ? num : min, numbers[0]);
+            const sortedNumbers = [...numbers].sort((a, b) => a - b);
+            const medianNum = calculateMedian(sortedNumbers);
+            const meanNum = calculateMean(numbers);
+            const incSeq = longestIncreasingSequence(numbers);
+            const decSeq = longestDecreasingSequence(numbers);
+
+            return { maxNum, minNum, medianNum, meanNum, incSeq, decSeq };
+        }
+
+        function calculateMedian(sortedNumbers) {
+            const len = sortedNumbers.length;
+            if (len % 2 === 0) {
+                return (sortedNumbers[len / 2 - 1] + sortedNumbers[len / 2]) / 2;
+            } else {
+                return sortedNumbers[(len - 1) / 2];
+            }
+        }
+
+        function calculateMean(numbers) {
+            const sum = numbers.reduce((acc, num) => acc + num, 0);
+            return sum / numbers.length;
+        }
+
+        function longestIncreasingSequence(numbers) {
+            let maxLen = 1;
+            let currentLen = 1;
+            let maxSeq = [numbers[0]];
+            let currentSeq = [numbers[0]];
+
+            for (let i = 1; i < numbers.length; i++) {
+                if (numbers[i] > numbers[i - 1]) {
+                    currentLen++;
+                    currentSeq.push(numbers[i]);
+                } else {
+                    if (currentLen > maxLen) {
+                        maxLen = currentLen;
+                        maxSeq = [...currentSeq];
+                    }
+                    currentLen = 1;
+                    currentSeq = [numbers[i]];
+                }
+            }
+
+            if (currentLen > maxLen) {
+                maxSeq = [...currentSeq];
+            }
+
+            return { length: maxLen, sequence: maxSeq };
+        }
+
+        function longestDecreasingSequence(numbers) {
+            let maxLen = 1;
+            let currentLen = 1;
+            let maxSeq = [numbers[0]];
+            let currentSeq = [numbers[0]];
+
+            for (let i = 1; i < numbers.length; i++) {
+                if (numbers[i] < numbers[i - 1]) {
+                    currentLen++;
+                    currentSeq.push(numbers[i]);
+                } else {
+                    if (currentLen > maxLen) {
+                        maxLen = currentLen;
+                        maxSeq = [...currentSeq];
+                    }
+                    currentLen = 1;
+                    currentSeq = [numbers[i]];
+                }
+            }
+
+            if (currentLen > maxLen) {
+                maxSeq = [...currentSeq];
+            }
+
+            return { length: maxLen, sequence: maxSeq };
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <p>Максимальне число: ${results.maxNum}</p>
+                <p>Мінімальне число: ${results.minNum}</p>
+                <p>Медіана: ${results.medianNum}</p>
+                <p>Середнє арифметичне: ${results.meanNum}</p>
+                <p>Найбільша послідовність чисел, що збільшується: ${results.incSeq.length}</p>
+                <p>${results.incSeq.sequence.join(', ')}</p>
+                <p>Найбільша послідовність чисел, що зменшується: ${results.decSeq.length}</p>
+                <p>${results.decSeq.sequence.join(', ')}</p>
+            `;
+        }
+    </script>
+</body>
+
+</html>
